@@ -11,6 +11,10 @@ English | [中文](README.md)
 
 ---
 
+![Home](docs/home.jpg)
+
+![Share page · watermarked proofs and guest picking](docs/share.jpg)
+
 ## Why StarBox
 
 - **Not cloud storage**: send a link to a friend or client — no sign-up, no app, it just opens.
