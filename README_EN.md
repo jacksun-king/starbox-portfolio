@@ -76,6 +76,8 @@ python seed_demo.py
 It creates 3 portfolios, 12 photos (including private and password-protected examples), 3 articles and 18 sample picks. Demo account: **`curator / demo123`**.
 Originals live in `demo/photos/`; watermarked proofs and thumbnails are generated on the spot by Pillow. Running it again changes nothing — use `python seed_demo.py --force` to rebuild.
 
+![Studio · bulk upload and portfolio options](docs/studio.jpg)
+
 ## Pages
 
 | Page | URL | Notes |

@@ -76,6 +76,8 @@ python seed_demo.py
 会生成 3 个作品集、12 张照片（含私密与密码示例）、3 篇文章和 18 条示例选片，演示账号 **`curator / demo123`**。
 原图在 `demo/photos/`，水印样片与缩略图由 Pillow 现场生成；重复执行不会覆盖，重建用 `python seed_demo.py --force`。
 
+![创作台 · 批量上传与作品集设置](docs/studio.jpg)
+
 ## 页面
 
 | 页面 | 地址 | 说明 |
