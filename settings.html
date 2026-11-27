@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>账号设置 · 星匣</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+<main class="wrap section" style="max-width:720px">
+  <div id="denied" style="display:none" class="panel"><div class="empty"><div class="empty-art"><span class="ico-wrap" data-ico="key" data-size="36"></span></div><h2>请先登录</h2><a class="btn btn-primary" href="auth.html?next=settings.html">登录 / 注册</a></div></div>
+  <div id="box">
+    <div class="panel"><h2>个人资料</h2>
+      <div class="field"><label>用户名</label><input id="username" disabled></div>
+      <div class="field"><label>邮箱</label><input id="email" disabled></div>
+      <div class="field"><label>简介</label><textarea id="bio" placeholder="介绍一下自己…"></textarea></div>
+      <button class="btn btn-primary" id="saveBio">保存资料</button>
+      <a class="btn" id="myProfile" style="margin-left:8px">查看我的主页</a>
+    </div>
+    <div class="panel"><h2>修改密码</h2>
+      <div class="field"><label>原密码</label><input id="oldPw" type="password"></div>
+      <div class="field"><label>新密码（至少 6 位）</label><input id="newPw" type="password"></div>
+      <button class="btn btn-primary" id="changePw">修改密码</button>
+    </div>
+    <div class="panel" style="border-color:rgba(229,100,106,.3)"><h2 style="color:var(--red)">危险操作</h2>
+      <p style="color:var(--soft);font-size:13px">注销账户会永久删除你的全部内容、文件和账号，无法恢复。</p>
+      <button class="btn btn-danger" id="delAccount">注销账户</button>
+    </div>
+  </div>
+</main>
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig(); renderNav('settings');
+  if(!ME()){ $('#box').style.display='none'; $('#denied').style.display='block'; return; }
+  $('#username').value = ME().username; $('#email').value = ME().email; $('#bio').value = ME().bio||'';
+  $('#myProfile').href = 'profile.html?user='+encodeURIComponent(ME().username);
+  $('#saveBio').onclick = async () => { try{ await post('/api/me/profile', {bio:$('#bio').value}); toast('已保存'); }catch(e){ toast(e.message); } };
+  $('#changePw').onclick = async () => {
+    try{ await post('/api/me/password', {old:$('#oldPw').value, new:$('#newPw').value}); toast('密码已修改'); $('#oldPw').value=''; $('#newPw').value=''; }
+    catch(e){ toast(e.message); }
+  };
+  $('#delAccount').onclick = async () => {
+    if(!confirm('确定注销账户？这会永久删除你的所有内容和文件，无法恢复。')) return;
+    if(!confirm('最后确认一次：真的要注销吗？')) return;
+    try{ await del('/api/me'); toast('账户已注销'); setTimeout(()=>location.href='index.html',700); }
+    catch(e){ toast(e.message); }
+  };
+});
+</script>
+</body>
+</html>

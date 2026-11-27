@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<base href="/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>作品集 · 星匣</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+<main class="wrap section">
+  <div id="content"><div class="loading">加载中…</div></div>
+</main>
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const pathToken = location.pathname.startsWith('/s/') ? decodeURIComponent(location.pathname.split('/')[2] || '') : '';
+const shareToken = pathToken || params.get('t') || '';
+const id = params.get('id') || '';
+const shareMode = !!shareToken;
+let col = null, onlyPicked = false;
+
+function pickButton(it, c){
+  if(!c.allow_pick || it.kind !== 'image') return '';
+  return `<button class="pick-btn ${it.picked?'picked':''}" data-pick="${it.id}" type="button" title="${it.picked?'取消选择':'选这张'}">${icon(it.picked?'heartFill':'heart',15)}<span>${it.picks||0}</span></button>`;
+}
+
+function itemCard(it, c){
+  const [kicon,kname] = kindMeta(it.kind);
+  const media = it.media_url
+    ? `<img src="${esc(it.media_url)}" alt="${esc(it.title)}" loading="lazy">`
+    : `<div class="ph">${icon(kicon,40)}</div>`;
+  return `<article class="card" data-id="${it.id}" data-picked="${it.picked?1:0}">
+    <div class="card-media">${media}${pickButton(it,c)}
+      <span class="badge">${icon(kicon,12)} ${kname}</span>
+    </div>
+    <div class="card-body"><h3 class="card-title"><a href="item.html?id=${it.id}">${esc(it.title)}</a></h3>
+    <div class="card-meta"><span>${icon('eye',12)} ${it.views}</span><span>${fmtDate(it.created_at)}</span>${it.picks?`<span>${icon('heart',12)} ${it.picks}</span>`:''}</div></div>
+  </article>`;
+}
+
+function shift(hex, amt){
+  const n = parseInt((hex||'#d4af7a').slice(1), 16);
+  const cl = v => Math.max(0, Math.min(255, v));
+  const r = cl((n>>16)+amt), g = cl(((n>>8)&255)+amt), b = cl((n&255)+amt);
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function applyAccent(hex){
+  if(!/^#[0-9a-f]{6}$/i.test(hex||'')) return;
+  const root = document.documentElement.style;
+  root.setProperty('--gold', hex);
+  root.setProperty('--brand', hex);
+  root.setProperty('--gold-2', shift(hex, 40));
+  root.setProperty('--brand-2', shift(hex, 40));
+  root.setProperty('--gold-3', shift(hex, -46));
+}
+
+function render(c){
+  applyAccent(c.accent);
+  const items = c.items || [];
+  const cover = c.cover_url ? `style="--cover:url('${esc(c.cover_url)}')"` : '';
+  const myPicked = c.my_pick_total || items.filter(i=>i.picked).length;
+  let actions = '';
+  if(c.can_edit){
+    actions += `<button class="btn btn-primary" id="shareCol">${icon('share',15)} 分享作品集</button>`;
+    actions += `<a class="btn" href="/api/collections/${c.id}/poster" download>${icon('image',15)} 下载长图</a>`;
+    if(c.pick_total) actions += `<a class="btn" href="/api/collections/${c.id}/picks.csv" download>${icon('download',15)} 选片清单</a>`;
+    actions += `<button class="btn" id="editCol">${icon('edit',15)} 编辑</button>`;
+    if(c.allow_pick) actions += `<button class="btn" id="pickStats">${icon('heart',15)} 收到 ${c.pick_total||0} 次选片</button>`;
+    actions += `<button class="btn btn-danger" id="delCol">${icon('trash',15)}</button>`;
+  } else {
+    actions += `<button class="btn btn-primary" id="copyShare">${icon('link',15)} 复制分享链接</button>`;
+    if(c.allow_pick) actions += `<button class="btn" id="copyPicks">${icon('copy',15)} 复制我的选片</button>`;
+  }
+  $('#content').innerHTML = `
+    <section class="col-hero ${c.cover_url?'':'no-cover'}" ${cover}>
+      <div class="col-hero-bg"></div><div class="col-hero-shade"></div>
+      <div class="col-hero-inner">
+        <div class="col-kicker">${icon('layers',13)} ${shareMode?'分享作品集':'精选作品集'} · ${items.length} 件</div>
+        <h1>${esc(c.title)}</h1>
+        ${c.description?`<p class="col-desc">${esc(c.description)}</p>`:''}
+        <div class="col-meta"><span>${icon('user',12)} <a href="profile.html?user=${encodeURIComponent(c.owner)}">${esc(c.owner)}</a></span>
+          <span>${icon('eye',12)} ${c.views} 次浏览</span><span>${icon('clock',12)} ${fmtDate(c.created_at)}</span>
+          ${c.visibility!=='public'?`<span>${icon(c.locked?'lock':'eye',12)} ${visMeta(c.visibility)[0]}</span>`:''}
+          ${(!c.can_edit && items.some(i=>i.watermarked))?`<span>${icon('lock',12)} 样片模式 · 原图请联系作者</span>`:''}</div>
+        <div class="col-actions">${actions}
+          ${c.allow_pick?`<span class="col-pickbar">${icon('heart',14)} 你已选 <b id="pickTotal">${myPicked}</b> 张</span>`:''}
+        </div>
+      </div>
+    </section>
+    ${c.story_html?`<section class="col-story prose">${c.story_html}</section>`:''}
+    <div class="sec-head"><span class="idx">01 /</span><h2>${c.allow_pick?'点选你喜欢的':'作品集内容'}</h2><span class="line"></span>
+      ${c.allow_pick?`<button class="btn btn-ghost btn-sm" id="onlyPicked">${onlyPicked?'显示全部':'只看已选'}</button>`:''}</div>
+    <div class="grid col-grid" id="colGrid">${items.length?items.map(i=>itemCard(i,c)).join(''):'<div class="empty"><div class="empty-art">'+icon('inbox',38)+'</div>这个作品集还是空的</div>'}</div>
+    ${!c.can_edit?`<section class="share-cta">
+      <div><span class="col-kicker">${icon('sparkle',13)} MADE WITH 星匣</span>
+        <h2>也想把一组照片，做成这样的作品集？</h2>
+        <p>批量上传、写下故事、发一个链接。访客不用注册，还能帮你选片。</p></div>
+      <a class="btn btn-primary" href="studio.html">免费做一本 ${icon('arrow',15)}</a>
+    </section>`:''}`;
+  if($('#shareCol')) $('#shareCol').onclick = shareModal;
+  if($('#editCol')) $('#editCol').onclick = editCol;
+  if($('#delCol')) $('#delCol').onclick = async () => {
+    if(!confirm('删除作品集？里面的内容会保留，但不再归入该作品集。')) return;
+    try{ await del('/api/collections/'+col.id); toast('作品集已删除'); setTimeout(()=>location.href='index.html',700); }
+    catch(e){ toast(e.message); }
+  };
+  if($('#pickStats')) $('#pickStats').onclick = pickStats;
+  if($('#copyShare')) $('#copyShare').onclick = () => copyText(location.href, '分享链接已复制');
+  if($('#copyPicks')) $('#copyPicks').onclick = copyPicks;
+  if($('#onlyPicked')) $('#onlyPicked').onclick = () => { onlyPicked = !onlyPicked; applyFilter(); };
+}
+
+function applyFilter(){
+  $$('#colGrid .card').forEach(card => {
+    card.style.display = onlyPicked && card.dataset.picked !== '1' ? 'none' : '';
+  });
+  if($('#onlyPicked')) $('#onlyPicked').textContent = onlyPicked ? '显示全部' : '只看已选';
+}
+
+async function copyText(text, msg){
+  try{ await navigator.clipboard.writeText(text); toast(msg); }
+  catch(e){ toast('复制失败，请手动复制'); }
+}
+
+async function togglePick(itemId, btn){
+  if(!col || !col.allow_pick) return;
+  btn.disabled = true;
+  try{
+    const r = await post('/api/collections/'+col.id+'/pick', {item_id:itemId});
+    const it = (col.items||[]).find(x=>x.id===itemId);
+    if(it){ it.picked = r.picked; it.picks = r.item_picks; }
+    btn.classList.toggle('picked', r.picked);
+    btn.title = r.picked ? '取消选择' : '选这张';
+    btn.innerHTML = icon(r.picked?'heartFill':'heart',15)+`<span>${r.item_picks}</span>`;
+    if($('#pickTotal')) $('#pickTotal').textContent = (col.items||[]).filter(x=>x.picked).length;
+    const card = btn.closest('.card'); if(card) card.dataset.picked = r.picked ? '1' : '0';
+    if(onlyPicked) applyFilter();
+  }catch(e){ toast(e.message); }
+  finally{ btn.disabled = false; }
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-pick]');
+  if(!btn) return;
+  e.preventDefault(); e.stopPropagation();
+  togglePick(Number(btn.dataset.pick), btn);
+});
+
+function copyPicks(){
+  const picked = (col.items||[]).filter(x=>x.picked);
+  if(!picked.length) return toast('先点选几张喜欢的图片');
+  const lines = picked.map((x,i)=>`${i+1}. ${x.title} - ${location.origin}/item.html?id=${x.id}`);
+  copyText(lines.join('\n'), '选片清单已复制');
+}
+
+function pickStats(){
+  const rows = (col.items||[]).filter(x=>x.picks).sort((a,b)=>b.picks-a.picks)
+    .map(x=>`<div class="pick-row"><span>${esc(x.title)}</span><b>${x.picks} 次</b></div>`).join('');
+  modal('选片统计', rows
+    ? `<p class="share-hint">共收到 ${col.pick_total||0} 次选择。把链接发给客户，他们不用注册就能选片。</p><div class="pick-list">${rows}</div>`
+    : '<p class="share-hint">还没有人选片。把分享链接发出去试试。</p>', async () => {}, '关闭');
+}
+
+function shareModal(){
+  const url = location.origin + (col.share_url || '/s/'+col.share_token);
+  modal('分享作品集', `
+    <p class="share-hint">把链接发给朋友或客户。对方不需要注册，打开就能浏览${col.visibility==='password'?'，输入访问密码后查看':''}。</p>
+    <div class="share-link"><input id="shUrl" readonly value="${esc(url)}"><button class="btn btn-primary btn-sm" type="button" id="shCopy">复制</button></div>
+    <label class="share-opt"><input type="checkbox" id="shPick" ${col.allow_pick?'checked':''}>
+      <span><b>允许访客选片</b><br><span class="share-hint">访客点选喜欢的图片，你能看到每张被选了多少次。</span></span></label>
+    <div style="margin-top:14px"><button class="btn btn-ghost btn-sm" type="button" id="shRegen">${icon('link',14)} 重置分享链接</button></div>
+  `, async () => {
+    await patch('/api/collections/'+col.id, {allow_pick:$('#shPick').checked});
+    toast('分享设置已保存'); setTimeout(()=>location.reload(),500);
+  });
+  $('#shCopy').onclick = () => copyText(url, '分享链接已复制');
+  $('#shRegen').onclick = async () => {
+    if(!confirm('重置后旧链接会失效，确定吗？')) return;
+    try{ await patch('/api/collections/'+col.id, {regenerate_share:true}); toast('分享链接已重置'); setTimeout(()=>location.reload(),600); }
+    catch(e){ toast(e.message); }
+  };
+}
+
+function editCol(){
+  modal('编辑作品集', `
+    <div class="field"><label>名称</label><input id="ecTitle" value="${esc(col.title)}"></div>
+    <div class="field"><label>一句话描述</label><textarea id="ecDesc" style="min-height:70px">${esc(col.description)}</textarea></div>
+    <div class="field"><label>作品集故事（Markdown）</label><textarea id="ecStory" style="min-height:150px">${esc(col.story||'')}</textarea></div>
+    <div class="field"><label>标签（逗号分隔）</label><input id="ecTags" value="${esc((col.tags||[]).join(','))}"></div>
+    <div class="field"><label>可见性</label><select id="ecVis">
+      <option value="public" ${col.visibility==='public'?'selected':''}>公开</option>
+      <option value="private" ${col.visibility==='private'?'selected':''}>私密</option>
+      <option value="password" ${col.visibility==='password'?'selected':''}>密码保护</option>
+    </select></div>
+    <div class="field"><label>新密码（改密码时填）</label><input id="ecPw" type="password"></div>
+    <label class="share-opt"><input type="checkbox" id="ecPick" ${col.allow_pick?'checked':''}><span><b>允许访客选片</b><br><span class="share-hint">关闭后访客只能浏览，不能点选。</span></span></label>
+  `, async () => {
+    await patch('/api/collections/'+col.id, {title:$('#ecTitle').value, description:$('#ecDesc').value,
+      story:$('#ecStory').value, tags:$('#ecTags').value.split(',').map(x=>x.trim()).filter(Boolean),
+      visibility:$('#ecVis').value, password:$('#ecPw').value, allow_pick:$('#ecPick').checked});
+    toast('已保存'); setTimeout(()=>location.reload(),600);
+  });
+}
+
+function showLock(unlockId){
+  $('#content').innerHTML = `<div class="panel"><div class="lock-box"><div class="lock-icon">${icon('lock',48)}</div>
+    <h2>这是加密作品集</h2><p>输入访问密码，查看整组作品</p>
+    <div class="lock-form"><input id="pw" type="password" placeholder="访问密码" style="flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:9px;outline:0">
+    <button class="btn btn-primary" id="unlockBtn">解锁</button></div>
+    <div id="lockErr" style="color:var(--red);font-size:13px;margin-top:12px"></div></div></div>`;
+  const go = async () => {
+    try{ await post('/api/unlock', {id:unlockId || id, type:'collection', password:$('#pw').value}); location.reload(); }
+    catch(err){ $('#lockErr').textContent = err.message; }
+  };
+  $('#unlockBtn').onclick = go; $('#pw').onkeydown = e => { if(e.key==='Enter') go(); };
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig(); renderNav('home');
+  try{
+    const path = shareMode ? '/api/share/'+encodeURIComponent(shareToken) : '/api/collections/'+encodeURIComponent(id);
+    const d = await api(path);
+    col = d.collection; render(col);
+    document.title = col.title + ' · ' + (CONFIG.site_name||'星匣');
+  }catch(e){
+    if(e.message===' locked') showLock(e.data && e.data.id);
+    else $('#content').innerHTML = '<div class="empty"><div class="empty-art">'+icon('search',38)+'</div>'+esc(e.message)+'</div>';
+  }
+});
+</script>
+</body>
+</html>

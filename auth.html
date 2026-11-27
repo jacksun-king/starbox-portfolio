@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录 / 注册 · 星匣</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+<main class="auth-wrap">
+  <div class="auth-card">
+    <h1 id="title">欢迎回来</h1>
+    <div class="sub" id="sub">登录后上传图片、写文章、管理你的内容</div>
+    <div class="auth-error" id="err" style="display:none"></div>
+    <div class="field"><label>用户名 / 邮箱</label><input id="account" autocomplete="username" placeholder="你的账号"></div>
+    <div class="field"><label>密码</label><input id="password" type="password" autocomplete="current-password" placeholder="至少 6 位"></div>
+    <div class="field" id="emailField" style="display:none"><label>邮箱</label><input id="email" type="email" placeholder="you@example.com"></div>
+    <button class="btn btn-primary" id="submitBtn" style="width:100%;padding:12px">登录</button>
+    <div class="auth-switch" id="switch"></div>
+  </div>
+</main>
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+let mode = 'login';
+function setMode(m){
+  mode = m;
+  $('#title').textContent = m==='login' ? '欢迎回来' : '创建账号';
+  $('#sub').textContent = m==='login' ? '登录后上传图片、写文章、管理你的内容' : '第一个注册的用户自动成为站点管理员';
+  $('#emailField').style.display = m==='register' ? 'block' : 'none';
+  $('#submitBtn').textContent = m==='login' ? '登录' : '注册';
+  $('#switch').innerHTML = m==='login'
+    ? '还没有账号？<a href="javascript:;" id="toReg">立即注册</a>'
+    : '已有账号？<a href="javascript:;" id="toLogin">去登录</a>';
+  $('#err').style.display='none';
+  if($('#toReg')) $('#toReg').onclick = ()=>setMode('register');
+  if($('#toLogin')) $('#toLogin').onclick = ()=>setMode('login');
+}
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig(); renderNav(''); setMode('login');
+  const next = new URLSearchParams(location.search).get('next');
+  $('#submitBtn').onclick = async () => {
+    const body = mode==='login'
+      ? {account:$('#account').value, password:$('#password').value}
+      : {username:$('#account').value, email:$('#email').value, password:$('#password').value};
+    try{
+      const d = await post(mode==='login'?'/api/login':'/api/register', body);
+      toast(d.first_admin ? '注册成功，你已成为管理员' : '欢迎回来');
+      setTimeout(()=>location.href = next || 'studio.html', 600);
+    }catch(e){ $('#err').textContent=e.message; $('#err').style.display='block'; }
+  };
+  $('#password').onkeydown = e => { if(e.key==='Enter') $('#submitBtn').click(); };
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>创作 · 星匣</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+<main class="wrap section">
+  <div id="needLogin" style="display:none" class="panel"><div class="empty"><div class="empty-art"><span class="ico-wrap" data-ico="key" data-size="36"></span></div>
+    <h2>登录后开始创作</h2><p>上传图片、写文章、收藏资料，都需要一个账号。</p>
+    <a class="btn btn-primary" href="auth.html?next=studio.html">登录 / 注册</a></div></div>
+
+  <div id="studio">
+    <div class="tabs-line" id="studioTabs">
+      <button class="active" data-tab="upload"><span class="ico-wrap" data-ico="upload"></span> 批量上传</button>
+      <button data-tab="collection"><span class="ico-wrap" data-ico="layers"></span> 新建作品集</button>
+      <button data-tab="post"><span class="ico-wrap" data-ico="pen"></span> 写文章</button>
+      <button data-tab="mine"><span class="ico-wrap" data-ico="book"></span> 我的内容</button>
+    </div>
+
+    <section id="tab-upload" class="panel">
+      <h2>批量上传</h2>
+      <div class="upload-tip">一次可选多张图片，统一打标签、设可见性；同一次上传可自动归为一个作品集。</div>
+      <div class="dropzone" id="dropzone">
+        <div class="empty-art"><span class="ico-wrap" data-ico="upload" data-size="34"></span></div><div>点击选择多个文件，或把一批文件拖到这里</div>
+        <div style="font-size:12px;margin-top:6px">支持多选 · 单文件最大 50MB · 一次最多 60 个</div>
+        <input type="file" id="fileInput" multiple>
+      </div>
+      <div id="fileGrid" class="file-preview-grid"></div>
+      <div id="fileInfo" style="font-size:13px;color:var(--soft);margin:10px 0"></div>
+      <div class="form-row">
+        <div class="field"><label>标题（单文件时有效）</label><input id="uTitle" placeholder="留空则用文件名"></div>
+        <div class="field"><label>标签（逗号分隔，应用到全部）</label><input id="uTags" placeholder="旅行, 壁纸, 灵感"></div>
+      </div>
+      <div class="field"><label>描述</label><input id="uDesc" placeholder="可选，简单描述一下"></div>
+      <div class="field"><label>归入作品集</label>
+        <select id="uCollection"><option value="">不归入作品集</option></select>
+        <div class="hint">或新建一个作品集（下面填名称，会覆盖上面的选择）</div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>新作品集名称（可选）</label><input id="uNewCollection" placeholder="如：京都红叶 2026"></div>
+        <div class="field"><label>作品集标签</label><input id="uColTags" placeholder="旅行, 日本, 红叶"></div>
+      </div>
+      <div class="field"><label>作品集故事（可选，Markdown）</label><textarea id="uColStory" style="min-height:90px" placeholder="这一组照片背后的故事…"></textarea></div>
+      <div class="field"><label>类型</label><div class="radio-group" id="kindRadio">
+        <label class="radio"><input type="radio" name="kind" value="image" checked><span><span class="ico-wrap" data-ico="image"></span> 图片</span></label>
+        <label class="radio"><input type="radio" name="kind" value="file"><span><span class="ico-wrap" data-ico="file"></span> 文件</span></label>
+      </div></div>
+      <div class="field"><label>可见性</label><div class="radio-group" id="visRadio">
+        <label class="radio"><input type="radio" name="vis" value="public" checked><span><span class="ico-wrap" data-ico="globe"></span> 公开</span></label>
+        <label class="radio"><input type="radio" name="vis" value="private"><span><span class="ico-wrap" data-ico="lock"></span> 私密</span></label>
+        <label class="radio"><input type="radio" name="vis" value="password"><span><span class="ico-wrap" data-ico="key"></span> 密码保护</span></label>
+      </div></div>
+      <div class="field" id="pwField" style="display:none"><label>访问密码</label><input id="uPw" type="password" placeholder="至少 4 位"></div>
+      <label class="share-opt" id="wmRow"><input type="checkbox" id="uWatermark" checked>
+        <span><b>给样片加水印</b><br><span class="share-hint">访客看到的是带水印的预览图，原图只有你自己能下载。</span></span></label>
+      <div class="field" id="wmTextField"><label>水印文字（可选）</label><input id="uWmText" placeholder="© 你的名字 / 工作室，留空用站点默认"></div>
+      <button class="btn btn-primary" id="uploadBtn" style="width:100%;padding:12px">上传全部</button>
+    </section>
+
+    <section id="tab-collection" class="panel" hidden>
+      <h2>新建作品集</h2>
+      <div class="upload-tip">先建作品集，再用「批量上传」把同一景区/城市/风格的一组图片归进去。建好后可以生成分享链接，发给朋友或客户。</div>
+      <div class="field"><label>作品集名称</label><input id="cTitle" placeholder="如：京都红叶 2026"></div>
+      <div class="field"><label>一句话描述</label><textarea id="cDesc" style="min-height:70px" placeholder="这组照片拍的是什么…"></textarea></div>
+      <div class="field"><label>作品集故事（Markdown，可选）</label><textarea id="cStory" style="min-height:130px" placeholder="## 拍摄手记&#10;&#10;写下这一组照片背后的故事…"></textarea></div>
+      <div class="field"><label>标签（逗号分隔）</label><input id="cTags" placeholder="旅行, 日本, 红叶"></div>
+      <div class="field"><label>可见性</label><div class="radio-group" id="cVisRadio">
+        <label class="radio"><input type="radio" name="cvis" value="public" checked><span><span class="ico-wrap" data-ico="globe"></span> 公开</span></label>
+        <label class="radio"><input type="radio" name="cvis" value="private"><span><span class="ico-wrap" data-ico="lock"></span> 私密</span></label>
+        <label class="radio"><input type="radio" name="cvis" value="password"><span><span class="ico-wrap" data-ico="key"></span> 密码保护</span></label>
+      </div></div>
+      <div class="field" id="cPwField" style="display:none"><label>访问密码</label><input id="cPw" type="password" placeholder="至少 4 位"></div>
+      <button class="btn btn-primary" id="createColBtn" style="width:100%;padding:12px">创建作品集</button>
+      <div class="panel-head" style="margin-top:28px"><h2 style="font-size:16px">我的作品集</h2><button class="btn btn-sm" id="refreshCols">刷新</button></div>
+      <div class="grid" id="myCols"></div>
+    </section>
+
+    <section id="tab-post" class="panel" hidden>
+      <h2>写文章</h2>
+      <div class="field"><label>标题</label><input id="pTitle" placeholder="文章标题"></div>
+      <div class="field"><label>正文（支持 Markdown）</label><textarea id="pBody" style="min-height:320px" placeholder="# 标题&#10;&#10;这里写正文，支持 **粗体**、`代码`、- 列表 等 Markdown 语法。"></textarea></div>
+      <div class="field"><label>标签（逗号分隔）</label><input id="pTags" placeholder="随笔, 技术, 日记"></div>
+      <div class="field"><label>可见性</label><div class="radio-group" id="pVisRadio">
+        <label class="radio"><input type="radio" name="pvis" value="public" checked><span><span class="ico-wrap" data-ico="globe"></span> 公开</span></label>
+        <label class="radio"><input type="radio" name="pvis" value="private"><span><span class="ico-wrap" data-ico="lock"></span> 私密</span></label>
+        <label class="radio"><input type="radio" name="pvis" value="password"><span><span class="ico-wrap" data-ico="key"></span> 密码保护</span></label>
+      </div></div>
+      <div class="field" id="pPwField" style="display:none"><label>访问密码</label><input id="pPw" type="password" placeholder="至少 4 位"></div>
+      <button class="btn btn-primary" id="postBtn" style="width:100%;padding:12px">发布文章</button>
+    </section>
+
+    <section id="tab-mine" hidden>
+      <div class="panel-head"><h2>我的内容</h2><button class="btn btn-sm" id="refreshMine">刷新</button></div>
+      <div class="grid" id="mineGrid"></div>
+      <div class="empty" id="mineEmpty" style="display:none"><div class="empty-art"><span class="ico-wrap" data-ico="inbox" data-size="38"></span></div>还没有内容</div>
+    </section>
+  </div>
+</main>
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+let selectedFiles = [];
+const val = s => $(s).value;
+const radio = name => document.querySelector(`input[name="${name}"]:checked`).value;
+
+function bindVisibility(visId, pwId){
+  function upd(){ $(pwId).style.display = radio(visId)==='password' ? 'block' : 'none'; }
+  document.querySelectorAll(`input[name="${visId}"]`).forEach(r=>r.onchange=upd);
+  upd();
+}
+function renderFiles(){
+  const grid = $('#fileGrid');
+  grid.innerHTML = selectedFiles.map((f,i)=>{
+    const isImg = f.type.startsWith('image/');
+    return `<div class="file-item">${isImg?`<img src="${f._url||''}" alt="">`:`<div class="file-item-ph">${icon('file',24)}</div>`}
+      <button class="file-remove" data-i="${i}" title="移除">×</button>
+      <div class="file-name">${esc(f.name)}</div><div class="file-size">${fmtSize(f.size)}</div></div>`;
+  }).join('');
+  $('#fileInfo').textContent = selectedFiles.length ? `已选 ${selectedFiles.length} 个文件 · 合计 ${fmtSize(selectedFiles.reduce((a,f)=>a+f.size,0))}` : '';
+  $$('.file-remove').forEach(b=>b.onclick=()=>{ selectedFiles.splice(+b.dataset.i,1); renderFiles(); });
+}
+function setFiles(list){
+  selectedFiles = Array.from(list).slice(0,60);
+  selectedFiles.forEach(f=>{
+    if(f.type.startsWith('image/')){
+      const r = new FileReader(); r.onload = e => { f._url=e.target.result; renderFiles(); }; r.readAsDataURL(f);
+    }
+  });
+  renderFiles();
+}
+async function loadMyCollections(){
+  try{
+    const d = await api('/api/collections?scope=mine');
+    const sel = $('#uCollection');
+    sel.innerHTML = '<option value="">不归入作品集</option>' + d.collections.map(c=>`<option value="${c.id}">${esc(c.title)}（${c.count}）</option>`).join('');
+    $('#myCols').innerHTML = d.collections.map(collectionCardHTML).join('') || '<div class="empty" style="grid-column:1/-1"><div class="empty-art">'+icon('layers',38)+'</div>还没有作品集</div>';
+  }catch(e){}
+}
+async function loadMine(){
+  const grid = $('#mineGrid');
+  grid.innerHTML = '<div class="loading">加载中…</div>';
+  try{
+    const d = await api('/api/items?scope=mine');
+    grid.innerHTML = d.items.map(cardHTML).join('');
+    $('#mineEmpty').style.display = d.items.length?'none':'block';
+  }catch(e){ grid.innerHTML='<div class="empty">'+esc(e.message)+'</div>'; }
+}
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig(); renderNav('studio');
+  if(!ME()){ $('#studio').style.display='none'; $('#needLogin').style.display='block'; return; }
+  bindVisibility('vis', '#pwField'); bindVisibility('pvis', '#pPwField'); bindVisibility('cvis', '#cPwField');
+  const syncWm = () => { $('#wmTextField').style.display = $('#uWatermark').checked ? '' : 'none'; };
+  $('#uWatermark').onchange = syncWm; syncWm();
+  $('#uWmText').placeholder = '© ' + (ME().username||'你的名字') + '（留空用站点默认）';
+  await loadMyCollections();
+
+  $$('#studioTabs button').forEach(b => b.onclick = () => {
+    $$('#studioTabs button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    ['upload','collection','post','mine'].forEach(t => $('#tab-'+t).hidden = (t!==b.dataset.tab));
+    if(b.dataset.tab==='mine') loadMine();
+    if(b.dataset.tab==='collection') loadMyCollections();
+  });
+  const dz = $('#dropzone');
+  dz.onclick = () => $('#fileInput').click();
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag'); };
+  dz.ondragleave = () => dz.classList.remove('drag');
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove('drag'); if(e.dataTransfer.files.length) setFiles(e.dataTransfer.files); };
+  $('#fileInput').onchange = e => setFiles(e.target.files);
+
+  $('#uploadBtn').onclick = async () => {
+    if(!selectedFiles.length){ toast('请先选择文件'); return; }
+    const vis = radio('vis'); const pw = val('#uPw');
+    if(vis==='password' && pw.length<4){ toast('访问密码至少 4 位'); return; }
+    const fd = new FormData();
+    selectedFiles.forEach(f=>fd.append('file', f));
+    fd.append('kind', radio('kind'));
+    fd.append('title', val('#uTitle')); fd.append('tags', val('#uTags'));
+    fd.append('description', val('#uDesc')); fd.append('visibility', vis); fd.append('password', pw);
+    fd.append('collection_id', val('#uCollection'));
+    fd.append('new_collection', val('#uNewCollection'));
+    fd.append('collection_tags', val('#uColTags'));
+    fd.append('collection_story', val('#uColStory'));
+    fd.append('watermark', $('#uWatermark').checked ? '1' : '0');
+    fd.append('watermark_text', val('#uWmText'));
+    const btn = $('#uploadBtn'); btn.disabled=true; btn.textContent='上传中…';
+    try{
+      const d = await api('/api/upload', {method:'POST', body:fd});
+      toast(`上传成功 ${d.count} 个文件` + (d.collection_id?'，已归入作品集':''));
+      setTimeout(()=>location.href = d.collection_id ? 'collection.html?id='+d.collection_id : 'item.html?id='+d.id, 600);
+    }catch(e){ toast(e.message); btn.disabled=false; btn.textContent='上传全部'; }
+  };
+  $('#createColBtn').onclick = async () => {
+    const vis = radio('cvis'); const pw = val('#cPw');
+    if(!val('#cTitle').trim()){ toast('请填写作品集名称'); return; }
+    if(vis==='password' && pw.length<4){ toast('访问密码至少 4 位'); return; }
+    try{
+      const d = await post('/api/collections', {title:val('#cTitle'), description:val('#cDesc'),
+        story:val('#cStory'), tags:val('#cTags').split(',').map(x=>x.trim()).filter(Boolean), visibility:vis, password:pw});
+      await loadMyCollections();
+      $('#uCollection').value = d.id;
+      const uploadTab = $$('#studioTabs button').find(x=>x.dataset.tab==='upload');
+      if(uploadTab) uploadTab.click();
+      toast('作品集已创建，接下来把照片批量传进去');
+    }catch(e){ toast(e.message); }
+  };
+  $('#refreshCols').onclick = loadMyCollections;
+  $('#postBtn').onclick = async () => {
+    const vis = radio('pvis'); const pw = val('#pPw');
+    if(!val('#pTitle').trim()){ toast('请填写标题'); return; }
+    if(vis==='password' && pw.length<4){ toast('访问密码至少 4 位'); return; }
+    try{
+      const d = await post('/api/post', {title:val('#pTitle'), body:val('#pBody'),
+        tags:val('#pTags').split(',').map(x=>x.trim()).filter(Boolean), visibility:vis, password:pw});
+      toast('发布成功'); setTimeout(()=>location.href='item.html?id='+d.id, 500);
+    }catch(e){ toast(e.message); }
+  };
+  $('#refreshMine').onclick = loadMine;
+});
+</script>
+</body>
+</html>

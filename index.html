@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>星匣 · 私人作品集</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+
+<div id="announcement" class="wrap" style="display:none;margin-top:18px">
+  <div style="background:var(--brand-soft);border:1px solid var(--line-2);color:var(--gold);padding:12px 18px;border-radius:10px;font-size:13px;letter-spacing:1px"></div>
+</div>
+
+<main>
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <span class="hero-badge"><span class="ico-wrap" data-ico="sparkle" data-size="13"></span> PRIVATE PORTFOLIO · SHARE LINK</span>
+      <h1>把一组照片，<br><em>变成一本作品集</em></h1>
+      <p id="heroDesc">整组上传，样片自动加水印，原图只留在你手里。写一段故事，发一个带密码的链接，客户不用注册就能看、能选片；选完导出清单，再一键生成竖版长图发出去。</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="studio.html"><span class="ico-wrap" data-ico="pen"></span> 做一本作品集 <span class="ico-wrap" data-ico="arrow"></span></a>
+        <a class="btn" href="#explore" id="heroExample"><span class="ico-wrap" data-ico="gallery"></span> 看一个示例</a>
+      </div>
+      <div class="stats-strip" id="statsStrip"></div>
+    </div>
+    <div class="hero-visual" aria-hidden="true" id="heroVisual">
+      <div class="hv-glow"></div>
+      <div class="hv-photo hv-photo-1"><img id="hvImg1" alt=""></div>
+      <div class="hv-photo hv-photo-2"><img id="hvImg2" alt=""></div>
+      <div class="hv-photo hv-photo-3"><img id="hvImg3" alt=""></div>
+      <div class="hv-chip hv-chip-lock"><span class="ico-wrap" data-ico="lock" data-size="13"></span> 私密分享</div>
+      <div class="hv-chip hv-chip-live"><i></i> 访客可点选</div>
+    </div>
+  </section>
+
+  <section class="wrap value-strip">
+    <div class="value-step"><span>01</span><h3>整组上传</h3><p>一次拖进 60 张，同一次旅拍、同一个项目不用拆开传。样片自动打水印，原图仅你自己可下载。</p></div>
+    <div class="value-step"><span>02</span><h3>写成作品集</h3><p>封面、标题、故事、标签；封面主色自动成为整页配色，每组都有不同气质。</p></div>
+    <div class="value-step"><span>03</span><h3>发链接收选片</h3><p>密码保护，访客免注册；谁选了哪几张、被选多少次，你一眼看到。</p></div>
+    <div class="value-step"><span>04</span><h3>交付与传播</h3><p>导出选片清单 CSV 直接给后期；一键生成竖版长图，发小红书、朋友圈。</p></div>
+  </section>
+
+  <section class="wrap" id="explore" style="padding-bottom:20px">
+    <div class="sec-head"><span class="idx">02 /</span><h2>作品集与内容</h2><span class="line"></span></div>
+    <div class="searchbar"><span class="search-ico"><span class="ico-wrap" data-ico="search"></span></span><input id="search" placeholder="搜索标题、正文、标签…" autocomplete="off"><button class="btn btn-primary btn-sm" id="searchBtn">搜索</button></div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-kind="">全部</button>
+      <button class="tab" data-kind="collection"><span class="ico-wrap" data-ico="layers"></span> 作品集</button>
+      <button class="tab" data-kind="image"><span class="ico-wrap" data-ico="image"></span> 图片</button>
+      <button class="tab" data-kind="post"><span class="ico-wrap" data-ico="article"></span> 文章</button>
+      <button class="tab" data-kind="file"><span class="ico-wrap" data-ico="file"></span> 文件</button>
+    </div>
+    <div class="tagbar" id="tagbar"></div>
+    <div class="tag-more" id="tagMore" style="display:none"><button class="btn btn-ghost btn-sm" id="tagToggle">展开全部标签 ▾</button></div>
+    <div class="grid" id="grid"><div class="loading">加载中…</div></div>
+    <div class="empty" id="empty" style="display:none"><div class="empty-art"><span class="ico-wrap" data-ico="inbox" data-size="40"></span></div><div>这里还没有内容，去创作第一件吧</div></div>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+let state = {kind:'', tag:'', q:''};
+async function load(){
+  const grid = $('#grid');
+  grid.innerHTML = '<div class="loading">加载中…</div>';
+  const params = new URLSearchParams();
+  if(state.kind && state.kind!=='collection') params.set('kind', state.kind);
+  if(state.tag) params.set('tag', state.tag);
+  if(state.q) params.set('q', state.q);
+  try{
+    let cards = [];
+    if(state.kind==='collection'){
+      const d = await api('/api/collections');
+      cards = d.collections.map(collectionCardHTML);
+    } else {
+      const d = await api('/api/items?' + params);
+      cards = d.items.map(cardHTML);
+    }
+    grid.innerHTML = cards.join('');
+    $('#empty').style.display = cards.length ? 'none' : 'block';
+  }catch(e){ grid.innerHTML = '<div class="empty">加载失败：'+esc(e.message)+'</div>'; }
+}
+async function loadHeroPhotos(){
+  try{
+    const d = await api('/api/items?kind=image');
+    const pics = d.items.slice(0,3);
+    pics.forEach((it,i)=>{
+      const img = $('#hvImg'+(i+1));
+      if(img && it.media_url) img.src = it.thumb_url || it.media_url;
+    });
+  }catch(e){}
+}
+async function loadFeatured(){
+  if(CONFIG.featured_share){ $('#heroExample').href = CONFIG.featured_share; return; }
+  try{
+    const d = await api('/api/collections');
+    if(d.collections && d.collections[0]) $('#heroExample').href = 'collection.html?id=' + d.collections[0].id;
+  }catch(e){}
+}
+let allTags = [], tagsExpanded = false;
+function renderTags(){
+  const show = tagsExpanded ? allTags : allTags.slice(0,8);
+  $('#tagbar').innerHTML = `<span class="tag ${state.tag?'':'active'}" data-tag="">全部</span>` + show.map(t=>`<span class="tag ${state.tag===t.name?'active':''}" data-tag="${esc(t.name)}">#${esc(t.name)} <b>${t.count}</b></span>`).join('');
+  if(allTags.length>8) $('#tagMore').style.display='block';
+  $$('#tagbar .tag').forEach(el => el.onclick = () => {
+    state.tag = el.dataset.tag;
+    $$('#tagbar .tag').forEach(x=>x.classList.remove('active')); el.classList.add('active'); load();
+  });
+  $('#tagToggle').textContent = tagsExpanded ? '收起标签 ▴' : `展开全部 ${allTags.length} 个标签 ▾`;
+}
+async function loadTags(){
+  try{
+    const d = await api('/api/tags');
+    allTags = d.tags; renderTags();
+    $('#tagToggle').onclick = () => { tagsExpanded = !tagsExpanded; renderTags(); };
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig();
+  renderNav('home');
+  $('#heroDesc').textContent = CONFIG.site_desc || $('#heroDesc').textContent;
+  if(CONFIG.stats){
+    const s = CONFIG.stats;
+    $('#statsStrip').innerHTML = `<div class="s"><div class="n">${s.collections||0}</div><div class="l">作品集</div></div>
+      <div class="s"><div class="n">${s.images||0}</div><div class="l">照片</div></div>
+      <div class="s"><div class="n">${s.picks||0}</div><div class="l">选片</div></div>
+      <div class="s"><div class="n">${s.posts||0}</div><div class="l">文章</div></div>`;
+  }
+  $$('#tabs .tab').forEach(b => b.onclick = () => {
+    state.kind = b.dataset.kind;
+    $$('#tabs .tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); load();
+  });
+  $('#searchBtn').onclick = () => { state.q = $('#search').value.trim(); load(); };
+  $('#search').onkeydown = e => { if(e.key==='Enter') $('#searchBtn').click(); };
+  await loadTags(); await load(); await loadHeroPhotos(); await loadFeatured();
+});
+</script>
+</body>
+</html>

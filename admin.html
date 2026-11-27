@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>管理后台 · 星匣</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+<main class="wrap section">
+  <div id="denied" style="display:none" class="panel"><div class="empty"><div class="empty-art"><span class="ico-wrap" data-ico="ban" data-size="36"></span></div><h2>无权访问</h2><p>这里只有管理员能进来。</p><a class="btn" href="index.html">返回首页</a></div></div>
+  <div id="admin">
+    <div class="stat-grid" id="stats"></div>
+    <div class="tabs-line" id="adminTabs">
+      <button class="active" data-tab="items"><span class="ico-wrap" data-ico="box"></span> 内容管理</button>
+      <button data-tab="users"><span class="ico-wrap" data-ico="users"></span> 用户管理</button>
+      <button data-tab="settings"><span class="ico-wrap" data-ico="settings"></span> 站点设置</button>
+    </div>
+    <section id="tab-items" class="panel">
+      <div class="panel-head"><h2>全部内容</h2><div style="display:flex;gap:8px"><input id="itemSearch" placeholder="搜索内容…" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;outline:0"><button class="btn btn-sm" id="refreshItems">刷新</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>标题</th><th>类型</th><th>可见性</th><th>作者</th><th>浏览</th><th>时间</th><th>操作</th></tr></thead><tbody id="itemRows"></tbody></table></div>
+    </section>
+    <section id="tab-users" class="panel" hidden>
+      <div class="panel-head"><h2>用户列表</h2><button class="btn btn-sm" id="refreshUsers">刷新</button></div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>内容数</th><th>注册时间</th><th>操作</th></tr></thead><tbody id="userRows"></tbody></table></div>
+    </section>
+    <section id="tab-settings" class="panel" hidden>
+      <h2>站点设置</h2>
+      <div class="field"><label>站点名称</label><input id="sName"></div>
+      <div class="field"><label>站点简介</label><input id="sDesc"></div>
+      <div class="field"><label>主人称呼</label><input id="sOwner"></div>
+      <div class="field"><label>公告</label><input id="sAnn"></div>
+      <div class="field"><label>页脚文字</label><input id="sFooter"></div>
+      <button class="btn btn-primary" id="saveSettings">保存设置</button>
+    </section>
+  </div>
+</main>
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+async function loadItems(){
+  const kw = $('#itemSearch').value.trim();
+  try{
+    const d = await api('/api/items?scope=all' + (kw?'&q='+encodeURIComponent(kw):''));
+    $('#itemRows').innerHTML = d.items.map(it => {
+      const [ic,kn] = kindMeta(it.kind); const [vn,vc] = visMeta(it.visibility);
+      return `<tr><td>#${it.id}</td><td><a href="item.html?id=${it.id}">${esc(it.title)}</a></td>
+        <td><span class="kind">${icon(ic,14)} ${kn}</span></td>
+        <td><span class="status ${vc}">${vn}</span></td><td>${esc(it.owner)}</td><td>${it.views}</td>
+        <td style="font-size:12px;color:var(--faint)">${fmtDate(it.created_at)}</td>
+        <td><div class="row-actions">
+          <button class="btn btn-sm" data-vis="${it.id}" data-cur="${it.visibility}">改可见性</button>
+          <button class="btn btn-sm btn-danger" data-del="${it.id}">删除</button>
+        </div></td></tr>`;
+    }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--faint)">没有内容</td></tr>';
+    $$('[data-vis]').forEach(b => b.onclick = () => {
+      const cur = b.dataset.cur;
+      modal('修改可见性', `<div class="field"><label>可见性</label><select id="mVis">
+        <option value="public" ${cur==='public'?'selected':''}>公开</option>
+        <option value="private" ${cur==='private'?'selected':''}>私密</option>
+        <option value="password" ${cur==='password'?'selected':''}>密码保护</option></select></div>
+        <div class="field"><label>新密码（密码保护时填写，留空保持原密码）</label><input id="mPw" type="password"></div>`,
+        async () => { await patch('/api/items/'+b.dataset.vis, {visibility:$('#mVis').value, password:$('#mPw').value}); toast('已更新'); loadItems(); });
+    });
+    $$('[data-del]').forEach(b => b.onclick = async () => {
+      if(!confirm('确定删除该内容？')) return;
+      try{ await del('/api/items/'+b.dataset.del); toast('已删除'); loadItems(); }catch(e){ toast(e.message); }
+    });
+  }catch(e){ toast(e.message); }
+}
+async function loadUsers(){
+  try{
+    const d = await api('/api/users');
+    $('#userRows').innerHTML = d.users.map(u => `<tr><td>#${u.id}</td><td>${esc(u.username)}</td><td>${esc(u.email)}</td>
+      <td><span class="status ${u.role==='admin'?'public':'private'}">${u.role==='admin'?'管理员':'用户'}</span></td>
+      <td>${u.items}</td><td style="font-size:12px;color:var(--faint)">${fmtDate(u.created_at)}</td>
+      <td><div class="row-actions">
+        <button class="btn btn-sm" data-role="${u.id}" data-cur="${u.role}">${u.role==='admin'?'取消管理员':'设为管理员'}</button>
+        ${u.id!==ME().id?`<button class="btn btn-sm btn-danger" data-udel="${u.id}">删除</button>`:''}
+      </div></td></tr>`).join('');
+    $$('[data-role]').forEach(b => b.onclick = async () => {
+      try{ await patch('/api/users/'+b.dataset.role, {role:b.dataset.cur==='admin'?'user':'admin'}); toast('已更新'); loadUsers(); }
+      catch(e){ toast(e.message); }
+    });
+    $$('[data-udel]').forEach(b => b.onclick = async () => {
+      if(!confirm('删除用户会同时删除其所有内容和文件，确定继续？')) return;
+      try{ await del('/api/users/'+b.dataset.udel); toast('已删除'); loadUsers(); }catch(e){ toast(e.message); }
+    });
+  }catch(e){ toast(e.message); }
+}
+function loadSettings(){
+  $('#sName').value = CONFIG.site_name||''; $('#sDesc').value = CONFIG.site_desc||'';
+  $('#sOwner').value = CONFIG.owner_name||''; $('#sAnn').value = CONFIG.announcement||'';
+  $('#sFooter').value = CONFIG.footer||'';
+}
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig(); renderNav('admin');
+  if(!ME() || ME().role!=='admin'){ $('#admin').style.display='none'; $('#denied').style.display='block'; return; }
+  const s = CONFIG.stats;
+  $('#stats').innerHTML = `<div class="stat"><div class="n">${s.items}</div><div class="l">全部内容</div></div>
+    <div class="stat"><div class="n">${s.images}</div><div class="l">图片</div></div>
+    <div class="stat"><div class="n">${s.posts}</div><div class="l">文章</div></div>
+    <div class="stat"><div class="n">${s.files}</div><div class="l">文件</div></div>`;
+  $$('#adminTabs button').forEach(b => b.onclick = () => {
+    $$('#adminTabs button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    ['items','users','settings'].forEach(t => $('#tab-'+t).hidden = (t!==b.dataset.tab));
+    if(b.dataset.tab==='users') loadUsers();
+  });
+  $('#refreshItems').onclick = loadItems;
+  $('#itemSearch').onkeydown = e => { if(e.key==='Enter') loadItems(); };
+  $('#refreshUsers').onclick = loadUsers;
+  $('#saveSettings').onclick = async () => {
+    try{
+      await post('/api/settings', {site_name:$('#sName').value, site_desc:$('#sDesc').value,
+        owner_name:$('#sOwner').value, announcement:$('#sAnn').value, footer:$('#sFooter').value});
+      toast('已保存，刷新页面生效'); await loadConfig(); loadSettings();
+    }catch(e){ toast(e.message); }
+  };
+  loadItems(); loadSettings();
+});
+</script>
+</body>
+</html>

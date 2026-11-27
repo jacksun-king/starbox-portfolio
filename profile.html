@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>用户主页 · 星匣</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+<main class="wrap section">
+  <div class="panel" id="userCard"><div class="loading">加载中…</div></div>
+  <h2 style="font-size:19px;margin:24px 0 16px">TA 的公开内容</h2>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none"><div class="empty-art"><span class="ico-wrap" data-ico="inbox" data-size="38"></span></div>还没有公开内容</div>
+</main>
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+const name = new URLSearchParams(location.search).get('user');
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig(); renderNav('');
+  if(!name){ $('#userCard').innerHTML='<div class="empty">未指定用户</div>'; return; }
+  try{
+    const d = await api('/api/users/'+encodeURIComponent(name));
+    const u = d.user;
+    $('#userCard').innerHTML = `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+      <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;display:grid;place-items:center;font-size:28px;font-weight:800">${esc(u.username[0].toUpperCase())}</div>
+      <div style="flex:1;min-width:200px"><h1 style="margin:0;font-size:24px">${esc(u.username)} ${u.role==='admin'?'<span class="badge" style="position:static;display:inline-block">管理员</span>':''}</h1>
+      <div style="color:var(--soft);font-size:13px">加入于 ${fmtDate(u.created_at)} · ${u.items} 件公开内容</div>
+      ${u.bio?`<p style="margin:8px 0 0;color:var(--soft)">${esc(u.bio)}</p>`:''}</div></div>`;
+    document.title = u.username + ' · ' + (CONFIG.site_name||'星匣');
+  }catch(e){ $('#userCard').innerHTML='<div class="empty">'+esc(e.message)+'</div>'; }
+  try{
+    const d = await api('/api/items?q=');
+    // 服务端无按用户筛选，前台过滤公开项
+    const list = d.items.filter(it => it.owner===name);
+    $('#grid').innerHTML = list.map(cardHTML).join('');
+    $('#empty').style.display = list.length?'none':'block';
+  }catch(e){}
+});
+</script>
+</body>
+</html>

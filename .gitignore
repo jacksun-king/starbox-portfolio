@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Runtime data — the database stores password hashes and uploads are private
+data/
+uploads/
+
+# Local temp / editor / OS files
+.tmp*
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

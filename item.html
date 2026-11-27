@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>详情 · 星匣</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html"><span class="logo-mark"></span><span id="logoName">星匣</span></a>
+    <nav class="nav" id="nav"></nav>
+  </div>
+</header>
+<main class="detail">
+  <div id="content"><div class="loading">加载中…</div></div>
+  <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap" id="actions"></div>
+</main>
+<footer class="site-footer"><div class="wrap" id="footerText">星匣 · 自建内容站</div></footer>
+<script src="js/common.js"></script>
+<script>
+const id = new URLSearchParams(location.search).get('id');
+let item = null;
+
+function render(it){
+  const [kicon,kname] = kindMeta(it.kind);
+  const [vname] = visMeta(it.visibility);
+  let media = '';
+  if(it.kind==='image' && it.media_url){
+    media = `<figure class="detail-figure"><img class="detail-media" src="${esc(it.media_url)}" alt="${esc(it.title)}">
+      ${it.can_raw
+        ? `<figcaption class="wm-note owner">${icon('shield',13)} 作者视角 · 访客看到的是水印样片 · <a href="${esc(it.raw_url||it.media_url)}" target="_blank" rel="noopener">查看原图</a></figcaption>`
+        : (it.watermarked ? `<figcaption class="wm-note">${icon('lock',13)} 样片已加水印，原图由作者保留</figcaption>` : '')}
+      </figure>`;
+  }
+  const ex = it.exif || {};
+  const exRows = [['camera','相机'],['lens','镜头'],['focal','焦段'],['aperture','光圈'],['shutter','快门'],['iso','ISO'],['taken','拍摄']]
+    .filter(([k]) => ex[k]);
+  if(it.width && it.height) exRows.push(['__size','尺寸', it.width + ' × ' + it.height]);
+  const exifBar = exRows.length
+    ? `<div class="exif-bar">${exRows.map(([k,label,v])=>{
+        const val = v || ex[k];
+        return `<span><i>${label}</i>${esc(String(val))}</span>`;
+      }).join('')}</div>`
+    : '';
+  const tags = (it.tags||[]).map(t=>`<span class="mini-tag">#${esc(t)}</span>`).join(' ');
+  let body = '';
+  if(it.kind==='post') body = `<div class="prose">${it.html||''}</div>`;
+  else if(it.kind==='file'){
+    body = `<div style="display:flex;align-items:center;gap:16px;background:var(--surface-2);padding:20px;border-radius:12px;flex-wrap:wrap">
+      <div style="color:var(--gold);display:flex">${icon(kicon,40)}</div><div style="flex:1;min-width:180px"><strong>${esc(it.filename)}</strong>
+      <div style="color:var(--soft);font-size:13px">${fmtSize(it.size)} · ${esc((it.ext||'').toUpperCase())}</div></div>
+      ${ME()?`<a class="btn btn-primary" href="/api/download?id=${it.id}">下载 ↓</a>`:'<a class="btn btn-primary" href="auth.html">登录后下载</a>'}
+    </div>`;
+  } else {
+    body = `<p style="color:var(--soft)">${esc(it.body||'')}</p>`;
+  }
+  $('#content').innerHTML = `
+    <div class="detail-head">
+      <span class="badge" style="position:static;display:inline-block">${icon(kicon,12)} ${kname}</span>
+      <span class="badge ${it.visibility==='public'?'':'private'}" style="position:static;display:inline-block">${vname}</span>
+      <h1 style="margin-top:14px">${esc(it.title)}</h1>
+      <div class="detail-meta"><span>by <a href="profile.html?user=${encodeURIComponent(it.owner)}">${esc(it.owner)}</a></span>
+        <span>${icon('clock',12)} ${fmtDate(it.created_at)}</span><span>${icon('eye',12)} ${it.views} 次浏览</span><span>${icon('download',12)} ${it.downloads} 次下载</span></div>
+      ${tags?`<div class="card-tags" style="margin-top:12px">${tags}</div>`:''}
+    </div>
+    <div class="detail-body">${media}${exifBar}${body}</div>`;
+  let actions = '';
+  if(it.kind==='image' && it.media_url){
+    const md = `![${it.title}](${location.origin}${it.media_url})`;
+    actions += `<button class="btn" id="copyMd">${icon('copy',15)} 复制 Markdown 链接</button><button class="btn" id="copyUrl">${icon('link',15)} 复制图片地址</button>`;
+  }
+  if(it.kind==='post' && it.can_edit) actions += `<button class="btn" id="editBtn">${icon('edit',15)} 编辑</button>`;
+  if(it.kind==='image' && it.can_raw) actions += `<a class="btn" href="/api/download?id=${it.id}">${icon('download',15)} 下载原图</a>`;
+  if(it.can_edit) actions += `<button class="btn" id="colBtn">${icon('layers',15)} 归入作品集</button>`;
+  if(it.can_edit) actions += `<button class="btn btn-danger" id="delBtn">${icon('trash',15)} 删除</button>`;
+  $('#actions').innerHTML = actions;
+  if($('#copyMd')) $('#copyMd').onclick = () => { navigator.clipboard.writeText(md); toast('Markdown 链接已复制'); };
+  if($('#copyUrl')) $('#copyUrl').onclick = () => { navigator.clipboard.writeText(location.origin + it.media_url); toast('图片地址已复制'); };
+  if($('#editBtn')) $('#editBtn').onclick = editPost;
+  if($('#colBtn')) $('#colBtn').onclick = assignCollection;
+  if($('#delBtn')) $('#delBtn').onclick = async () => {
+    if(!confirm('确定删除「'+it.title+'」？此操作不可恢复。')) return;
+    try{ await del('/api/items/'+it.id); toast('已删除'); setTimeout(()=>location.href='index.html',700); }
+    catch(e){ toast(e.message); }
+  };
+}
+
+function editPost(){
+  const it = item;
+  modal('编辑文章', `
+    <div class="field"><label>标题</label><input id="eTitle" value="${esc(it.title)}"></div>
+    <div class="field"><label>正文（Markdown）</label><textarea id="eBody" style="min-height:280px">${esc(it.body)}</textarea></div>
+    <div class="field"><label>标签（逗号分隔）</label><input id="eTags" value="${esc((it.tags||[]).join(','))}"></div>
+    <div class="field"><label>可见性</label><select id="eVis">
+      <option value="public" ${it.visibility==='public'?'selected':''}>公开</option>
+      <option value="private" ${it.visibility==='private'?'selected':''}>私密（仅自己和管理员）</option>
+      <option value="password" ${it.visibility==='password'?'selected':''}>密码保护</option>
+    </select></div>
+  `, async () => {
+    await patch('/api/items/'+it.id, {title:$('#eTitle').value, body:$('#eBody').value,
+      tags:$('#eTags').value.split(',').map(x=>x.trim()).filter(Boolean), visibility:$('#eVis').value});
+    toast('已保存'); setTimeout(()=>location.reload(),600);
+  });
+}
+
+async function assignCollection(){
+  const d = await api('/api/collections?scope=mine');
+  const opts = (d.collections||[]).map(c=>`<option value="${c.id}" ${item.collection_id===c.id?'selected':''}>${esc(c.title)} · ${c.count} 项</option>`).join('');
+  modal('归入作品集', `
+    <div class="field"><label>选择作品集</label><select id="aCol"><option value="">不归入任何作品集</option>${opts}</select></div>
+    <div class="field"><label>或新建作品集</label><input id="aNewCol" placeholder="输入新作品集名称，清空则使用上方选择"></div>
+  `, async () => {
+    let colId = $('#aCol').value;
+    const newTitle = $('#aNewCol').value.trim();
+    if(newTitle){
+      const made = await post('/api/collections', {title:newTitle, description:'', tags:[], visibility:'public'});
+      colId = String(made.id);
+    }
+    await patch('/api/items/'+item.id, {collection_id: colId ? Number(colId) : null});
+    toast('已更新作品集'); setTimeout(()=>location.reload(),600);
+  });
+}
+
+function showLock(){
+  $('#content').innerHTML = `<div class="panel"><div class="lock-box">
+    <div class="lock-icon">${icon('lock',48)}</div><h2>这是加密内容</h2><p>输入访问密码即可查看</p>
+    <div class="lock-form"><input id="pw" type="password" placeholder="访问密码" style="flex:1;padding:10px 13px;border:1px solid var(--line);border-radius:9px;outline:0">
+    <button class="btn btn-primary" id="unlockBtn">解锁</button></div>
+    <div id="lockErr" style="color:var(--red);font-size:13px;margin-top:12px"></div>
+  </div></div>`;
+  const go = async () => {
+    try{ await post('/api/unlock', {id, type:'item', password:$('#pw').value}); location.reload(); }
+    catch(e){ $('#lockErr').textContent = e.message; }
+  };
+  $('#unlockBtn').onclick = go;
+  $('#pw').onkeydown = e => { if(e.key==='Enter') go(); };
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadConfig(); renderNav('home');
+  try{
+    const d = await api('/api/items/'+id);
+    item = d.item; render(item);
+  }catch(e){
+    if(e.message===' locked') showLock();
+    else $('#content').innerHTML = '<div class="empty"><div class="empty-art">'+icon('search',38)+'</div>'+esc(e.message)+'</div>';
+  }
+});
+</script>
+</body>
+</html>
